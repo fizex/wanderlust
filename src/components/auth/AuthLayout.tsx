@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plane } from 'lucide-react';
+import Logo from '../Logo';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -13,11 +13,10 @@ export default function AuthLayout({ children, title, subtitle, footer }: AuthLa
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-sm p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-6">
-            <Plane className="h-8 w-8 text-indigo-600" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent">
-              Wanderlust AI
-            </span>
+          <div className="flex justify-center mb-6">
+            <div className="w-48">
+              <Logo />
+            </div>
           </div>
           <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
           {subtitle && <p className="mt-2 text-gray-600">{subtitle}</p>}
