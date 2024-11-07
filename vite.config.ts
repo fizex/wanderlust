@@ -6,5 +6,11 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react']
   },
-  envPrefix: 'VITE_'
+  envPrefix: 'VITE_',
+  server: {
+    historyApiFallback: true
+  },
+  preview: {
+    historyApiFallback: true
+  }
 });
