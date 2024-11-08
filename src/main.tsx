@@ -5,6 +5,10 @@ import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
 import { FirestoreProvider } from './contexts/FirestoreContext';
 import { Toaster } from 'react-hot-toast';
+import { initUnsplash } from './services/unsplash';
+
+// Initialize Unsplash with the access key
+initUnsplash(import.meta.env.VITE_UNSPLASH_ACCESS_KEY);
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Failed to find the root element');

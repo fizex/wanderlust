@@ -19,7 +19,7 @@ VITE_FIREBASE_APP_ID=          # Firebase app ID
 ## Development
 
 1. Clone the repository
-2. Copy `.env.example` to `.env` and fill in your API keys etc.
+2. Copy `.env.example` to `.env` and fill in your API keys
 3. Install dependencies: `npm install`
 4. Start development server: `npm run dev`
 

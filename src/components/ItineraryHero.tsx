@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, CalendarClock, Sparkles, Info } from 'lucide-react';
+import { Calendar, MapPin, CalendarClock, Sparkles, Info, AlertCircle } from 'lucide-react';
 import { ItineraryDay } from '../types/itinerary';
 import { formatDistanceToNow } from 'date-fns';
 import { getCountryImage } from '../services/unsplash';
@@ -10,9 +10,15 @@ interface ItineraryHeroProps {
   destination: string;
   country: string;
   date?: string;
+  normalizedDate?: string;
   duration: string;
   days: ItineraryDay[];
   createdAt: number;
+  corrections?: Array<{
+    original: string;
+    corrected: string;
+    reason: string;
+  }>;
 }
 
 export default function ItineraryHero({
@@ -21,15 +27,25 @@ export default function ItineraryHero({
   destination,
   country,
   date,
+  normalizedDate,
   duration,
   days = [],
   createdAt,
+  corrections = [],
 }: ItineraryHeroProps) {
-  const imageUrl = React.useMemo(() => getCountryImage(country), [country]);
+  const [imageUrl, setImageUrl] = React.useState<string>('');
+  
+  React.useEffect(() => {
+    async function loadImage() {
+      const url = await getCountryImage(country);
+      setImageUrl(url);
+    }
+    loadImage();
+  }, [country]);
+
   const totalDays = days?.length || 0;
   const locations = [...new Set(days?.map(day => day.location))].filter(Boolean);
 
-  // Format the creation date with validation
   const formattedCreatedAt = React.useMemo(() => {
     try {
       const timestamp = typeof createdAt === 'number' ? createdAt : parseInt(createdAt);
@@ -42,7 +58,6 @@ export default function ItineraryHero({
     }
   }, [createdAt]);
 
-  // Safely extract and normalize local events
   const localEvents = React.useMemo(() => {
     if (!days?.[0]?.localEvents || !Array.isArray(days[0].localEvents)) {
       return [];
@@ -56,7 +71,6 @@ export default function ItineraryHero({
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      {/* Hero Image Section */}
       <div className="relative h-64 md:h-80">
         <img
           src={imageUrl}
@@ -69,9 +83,7 @@ export default function ItineraryHero({
         </div>
       </div>
 
-      {/* Content Section */}
       <div className="p-6 space-y-6">
-        {/* Description and Key Info */}
         <div>
           <p className="text-lg text-gray-700 mb-4">{description}</p>
           
@@ -90,11 +102,11 @@ export default function ItineraryHero({
               </div>
             </div>
             
-            {date && (
+            {(normalizedDate || date) && (
               <div className="flex items-start space-x-3">
                 <CalendarClock className="w-6 h-6 text-indigo-600 flex-shrink-0 mt-0.5" />
                 <div className="text-gray-600 leading-tight">
-                  {date}
+                  {normalizedDate || date}
                 </div>
               </div>
             )}
@@ -108,7 +120,29 @@ export default function ItineraryHero({
           </div>
         </div>
 
-        {/* Local Events Section */}
+        {corrections.length > 0 && (
+          <div className="border-t pt-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <AlertCircle className="w-6 h-6 text-amber-500" />
+              <h3 className="text-lg font-semibold">Input Corrections</h3>
+            </div>
+            <div className="bg-amber-50 rounded-lg p-4">
+              <ul className="space-y-4">
+                {corrections.map((correction, index) => (
+                  <li key={index} className="border-l-2 border-amber-300 pl-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="line-through text-gray-500">{correction.original}</span>
+                      <span className="text-gray-400">→</span>
+                      <span className="font-medium text-gray-900">{correction.corrected}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{correction.reason}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
         {localEvents.length > 0 && (
           <div className="border-t pt-6">
             <div className="flex items-center space-x-3 mb-4">

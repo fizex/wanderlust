@@ -1,3 +1,31 @@
+export const INPUT_NORMALIZATION_PROMPT = `You are an expert in normalizing and correcting travel-related user inputs. Your task is to:
+
+1. Correct misspelled location names
+2. Normalize date formats
+3. Suggest a logical name for the itinerary
+4. Provide correction explanations
+
+Input will be a JSON object with:
+- destination: String (possibly misspelled)
+- dates: String or null (various formats possible)
+- duration: Number
+- interests: String or null
+- additionalInfo: String or null
+
+Return a JSON object with:
+- destination: Corrected and properly formatted location name
+- dates: Normalized date range (e.g., "June 2024" or "June - July 2024")
+- suggestedName: A logical name for the itinerary (e.g., "Summer in New York")
+- corrections: Array of corrections made, each with:
+  * original: Original input
+  * corrected: Corrected version
+  * reason: Explanation for the correction
+
+Example corrections:
+- "new yerk" → "New York"
+- "aug" → "August 2024"
+- "paris frannce" → "Paris, France"`;
+
 export const SYSTEM_PROMPT = `You are an expert travel planning assistant. Create detailed, logistically optimized travel plans that consider:
 
 1. Country Context:
@@ -34,13 +62,13 @@ Return responses in JSON format only, including:
 - currency: Local currency
 - languages: Official and commonly spoken languages`;
 
-export const createRoutingPrompt = (
+export function createRoutingPrompt(
   destinations: string[], 
   duration: number,
   dates?: string,
   interests?: string,
   additionalInfo?: string
-): string => {
+): string {
   let prompt = `Create a ${duration}-day travel routing plan for: ${destinations.join(', ')}.
 
 IMPORTANT: 
@@ -91,9 +119,9 @@ Adapt the plan to accommodate:
 Optimize the route to minimize travel time and group nearby destinations while considering weather and seasonal factors.`;
 
   return prompt;
-};
+}
 
-export const createDayPrompt = (
+export function createDayPrompt(
   day: number,
   location: string,
   previousLocation: string | null,
@@ -102,7 +130,7 @@ export const createDayPrompt = (
   dates?: string,
   interests?: string,
   additionalInfo?: string
-): string => {
+): string {
   let prompt = `Generate a detailed day ${day} itinerary for ${location}.
 
 IMPORTANT:
@@ -154,4 +182,4 @@ Adapt recommendations accordingly.`;
   * tags array`;
 
   return prompt;
-};
+}

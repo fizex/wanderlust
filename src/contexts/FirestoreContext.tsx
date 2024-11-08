@@ -19,12 +19,14 @@ const FirestoreContext = createContext<FirestoreContextType>({
 export function FirestoreProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [itineraries, setItineraries] = useState<SavedItinerary[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with loading true
   const [error, setError] = useState<string | null>(null);
 
   const refreshItineraries = useCallback(async () => {
     if (!user) {
       setItineraries([]);
+      setError(null);
+      setLoading(false);
       return;
     }
 
@@ -32,27 +34,42 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
     setError(null);
 
     try {
+      console.log('Fetching itineraries for user:', user.uid);
       const userItineraries = await getUserItineraries(user.uid);
+      console.log('Fetched itineraries:', userItineraries);
       setItineraries(userItineraries);
     } catch (err) {
-      setError('Failed to load itineraries');
       console.error('Error loading itineraries:', err);
+      const message = err instanceof Error ? err.message : 'Failed to load itineraries';
+      setError(message);
     } finally {
       setLoading(false);
     }
   }, [user]);
 
+  // Fetch itineraries when user changes
   React.useEffect(() => {
     refreshItineraries();
   }, [refreshItineraries]);
 
+  const value = React.useMemo(() => ({
+    itineraries,
+    loading,
+    error,
+    refreshItineraries
+  }), [itineraries, loading, error, refreshItineraries]);
+
   return (
-    <FirestoreContext.Provider value={{ itineraries, loading, error, refreshItineraries }}>
+    <FirestoreContext.Provider value={value}>
       {children}
     </FirestoreContext.Provider>
   );
 }
 
 export function useFirestore() {
-  return useContext(FirestoreContext);
+  const context = useContext(FirestoreContext);
+  if (!context) {
+    throw new Error('useFirestore must be used within a FirestoreProvider');
+  }
+  return context;
 }

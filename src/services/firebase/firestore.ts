@@ -9,7 +9,6 @@ import {
   query,
   where,
   orderBy,
-  serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
 import { db } from './config';
@@ -23,6 +22,7 @@ export interface SavedItinerary {
   destination: string;
   country: string;
   date: string;
+  normalizedDate?: string;
   duration: string;
   days: ItineraryDay[];
   originalDays: ItineraryDay[];
@@ -36,42 +36,42 @@ export interface SavedItinerary {
   };
 }
 
-export async function saveNewItinerary(
-  userId: string,
-  name: string,
-  description: string,
-  destination: string,
-  country: string,
-  date: string,
-  duration: string,
-  days: ItineraryDay[],
-  metadata?: SavedItinerary['metadata']
-): Promise<string> {
-  const itinerariesRef = collection(db, 'itineraries');
-  const newItineraryRef = doc(itinerariesRef);
-  const now = Date.now();
+export async function getUserItineraries(userId: string): Promise<SavedItinerary[]> {
+  if (!db) throw new Error('Firestore not initialized');
+  if (!userId) throw new Error('User ID is required');
   
-  const itinerary: SavedItinerary = {
-    id: newItineraryRef.id,
-    userId,
-    name,
-    description,
-    destination,
-    country,
-    date,
-    duration,
-    days,
-    originalDays: [...days],
-    createdAt: now,
-    updatedAt: now,
-    metadata
-  };
+  console.log('Fetching itineraries for user:', userId);
+  
+  const itinerariesRef = collection(db, 'itineraries');
+  const q = query(
+    itinerariesRef,
+    where('userId', '==', userId),
+    orderBy('createdAt', 'desc')
+  );
+  
+  try {
+    const querySnapshot = await getDocs(q);
+    const itineraries = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        id: doc.id,
+        createdAt: data.createdAt || Date.now(),
+        updatedAt: data.updatedAt || Date.now()
+      } as SavedItinerary;
+    });
 
-  await setDoc(newItineraryRef, itinerary);
-  return newItineraryRef.id;
+    console.log('Fetched itineraries:', itineraries);
+    return itineraries;
+  } catch (error) {
+    console.error('Error fetching user itineraries:', error);
+    throw error;
+  }
 }
 
 export async function getItinerary(id: string): Promise<SavedItinerary | null> {
+  if (!db) throw new Error('Firestore not initialized');
+  
   const docRef = doc(db, 'itineraries', id);
   const docSnap = await getDoc(docRef);
   
@@ -87,30 +87,51 @@ export async function getItinerary(id: string): Promise<SavedItinerary | null> {
   return null;
 }
 
-export async function getUserItineraries(userId: string): Promise<SavedItinerary[]> {
-  const itinerariesRef = collection(db, 'itineraries');
-  const q = query(
-    itinerariesRef,
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
-  );
+export async function saveNewItinerary(
+  userId: string,
+  name: string,
+  description: string,
+  destination: string,
+  country: string,
+  date: string,
+  normalizedDate: string,
+  duration: string,
+  days: ItineraryDay[],
+  metadata?: SavedItinerary['metadata']
+): Promise<string> {
+  if (!db) throw new Error('Firestore not initialized');
   
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      ...data,
-      id: doc.id,
-      createdAt: data.createdAt || Date.now(),
-      updatedAt: data.updatedAt || Date.now()
-    } as SavedItinerary;
-  });
+  const itinerariesRef = collection(db, 'itineraries');
+  const newItineraryRef = doc(itinerariesRef);
+  const now = Date.now();
+  
+  const itinerary: SavedItinerary = {
+    id: newItineraryRef.id,
+    userId,
+    name,
+    description,
+    destination,
+    country,
+    date,
+    normalizedDate,
+    duration,
+    days,
+    originalDays: [...days],
+    createdAt: now,
+    updatedAt: now,
+    metadata
+  };
+
+  await setDoc(newItineraryRef, itinerary);
+  return newItineraryRef.id;
 }
 
 export async function updateItinerary(
   id: string,
   updates: Partial<SavedItinerary>
 ): Promise<void> {
+  if (!db) throw new Error('Firestore not initialized');
+  
   const docRef = doc(db, 'itineraries', id);
   await updateDoc(docRef, {
     ...updates,
@@ -119,6 +140,8 @@ export async function updateItinerary(
 }
 
 export async function deleteItinerary(id: string, userId: string): Promise<void> {
+  if (!db) throw new Error('Firestore not initialized');
+  
   const docRef = doc(db, 'itineraries', id);
   const docSnap = await getDoc(docRef);
   
@@ -132,16 +155,4 @@ export async function deleteItinerary(id: string, userId: string): Promise<void>
   }
   
   await deleteDoc(docRef);
-}
-
-export async function revertToOriginal(id: string): Promise<void> {
-  const itinerary = await getItinerary(id);
-  if (!itinerary) {
-    throw new Error('Itinerary not found');
-  }
-
-  await updateDoc(doc(db, 'itineraries', id), {
-    days: itinerary.originalDays,
-    updatedAt: Date.now()
-  });
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { signIn } from '../../services/firebase';
+import { signIn } from '../../services/firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -10,18 +10,22 @@ export default function SignInForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      await signIn(email.trim(), password);
       navigate('/');
       toast.success('Welcome back!');
     } catch (error) {
-      toast.error('Invalid email or password');
+      const message = error instanceof Error ? error.message : 'Failed to sign in';
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -41,6 +45,12 @@ export default function SignInForm() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+            {error}
+          </div>
+        )}
+        
         <div>
           <label className="block text-sm font-medium text-gray-700">Email</label>
           <div className="mt-1 relative">
@@ -52,6 +62,7 @@ export default function SignInForm() {
               onChange={(e) => setEmail(e.target.value)}
               className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="Enter your email"
+              disabled={loading}
             />
           </div>
         </div>
@@ -72,13 +83,14 @@ export default function SignInForm() {
               onChange={(e) => setPassword(e.target.value)}
               className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="Enter your password"
+              disabled={loading}
             />
           </div>
         </div>
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !email || !password}
           className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {loading ? (

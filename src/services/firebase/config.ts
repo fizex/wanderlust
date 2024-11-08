@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,23 +11,28 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Initialize Firebase only once
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase only if config is valid
+function initializeFirebase() {
+  if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+    console.error('Firebase configuration is incomplete');
+    return null;
+  }
+
+  try {
+    return initializeApp(firebaseConfig);
+  } catch (error) {
+    console.error('Error initializing Firebase:', error);
+    return null;
+  }
+}
+
+const app = initializeFirebase();
 
 // Get Auth instance
-export const auth = getAuth(app);
+const auth = app ? getAuth(app) : null;
+if (auth) auth.useDeviceLanguage();
 
 // Get Firestore instance
-export const db = getFirestore(app);
+const db = app ? getFirestore(app) : null;
 
-// Enable offline persistence with error handling
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === 'failed-precondition') {
-    // Multiple tabs open, persistence can only be enabled in one tab at a time
-    console.log('Persistence already enabled in another tab');
-  } else if (err.code === 'unimplemented') {
-    console.log('Browser doesn\'t support persistence');
-  }
-});
-
-export default app;
+export { auth, db };

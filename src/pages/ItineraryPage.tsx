@@ -94,14 +94,14 @@ export default function ItineraryPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-3">
+      <div className="flex flex-col lg:flex-row lg:gap-8">
+        <div className="flex-1 mb-8 lg:mb-0">
           <div className="space-y-8">
             <ItineraryHero
               name={itinerary.name}
               description={itinerary.description}
               destination={itinerary.destination}
-              country={itinerary.country || 'united states'} // Default to US if not specified
+              country={itinerary.country || 'united states'}
               date={itinerary.date}
               duration={itinerary.duration}
               days={itinerary.days}
@@ -126,8 +126,10 @@ export default function ItineraryPage() {
           </div>
         </div>
 
-        <div>
-          <BookingWidget />
+        <div className="lg:w-80 xl:w-96">
+          <div className="lg:sticky lg:top-8">
+            <BookingWidget />
+          </div>
         </div>
       </div>
     </div>

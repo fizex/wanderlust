@@ -31,6 +31,13 @@ export interface ItineraryDay {
   weatherInfo?: string;
   localEvents?: Event[];
   activities: Activity[];
+  suggestedName?: string;
+  normalizedDate?: string;
+  corrections?: Array<{
+    original: string;
+    corrected: string;
+    reason: string;
+  }>;
 }
 
 export interface ItineraryMetadata {
