@@ -8,7 +8,6 @@ import LoadingScreen from '../components/LoadingScreen';
 import { FormData } from '../types/form';
 import { OpenAIClient } from '../services/openai/client';
 import { saveNewItinerary } from '../services/firebase/firestore';
-import { OpenAIServiceError } from '../services/openai/errors';
 import toast from 'react-hot-toast';
 
 export default function PlanPage() {
@@ -23,52 +22,34 @@ export default function PlanPage() {
     setLoading(true);
 
     try {
-      const client = new OpenAIClient(
-        import.meta.env.VITE_OPENAI_API_KEY,
-        [formData.destination],
-        formData
-      );
-
-      const itinerary = await client.generateFullItinerary(parseInt(formData.duration));
+      const client = new OpenAIClient(import.meta.env.VITE_OPENAI_API_KEY);
+      const { itinerary, name, description, metadata } = await client.generateFullItinerary(formData);
 
       if (!user || !itinerary.length) {
         throw new Error('Failed to generate itinerary');
       }
 
       const firstDay = itinerary[0];
-      const name = firstDay.suggestedName || `${firstDay.location} - ${formData.duration} Days`;
-      const description = `${formData.duration}-day adventure in ${firstDay.location}`;
-      
       const itineraryId = await saveNewItinerary(
         user.uid,
         name,
         description,
         firstDay.location,
-        firstDay.country,
+        metadata.country || firstDay.country || 'Unknown',
         formData.dates,
-        firstDay.normalizedDate || formData.dates,
+        formData.dates,
         formData.duration,
         itinerary,
-        {
-          recommendedSeasons: ['Spring', 'Summer', 'Fall', 'Winter'],
-          timeZone: 'Local Time',
-          currency: 'Local Currency',
-          languages: ['Local Language']
-        }
+        metadata
       );
 
       await refreshItineraries();
       navigate(`/itinerary/${itineraryId}`);
       toast.success('Itinerary generated successfully');
     } catch (err) {
-      let errorMessage = 'Failed to generate itinerary. Please try again.';
-      
-      if (err instanceof OpenAIServiceError) {
-        errorMessage = err.message;
-      }
-      
-      setError(errorMessage);
-      toast.error(errorMessage);
+      const message = err instanceof Error ? err.message : 'Failed to generate itinerary';
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }

@@ -40,8 +40,6 @@ export async function getUserItineraries(userId: string): Promise<SavedItinerary
   if (!db) throw new Error('Firestore not initialized');
   if (!userId) throw new Error('User ID is required');
   
-  console.log('Fetching itineraries for user:', userId);
-  
   const itinerariesRef = collection(db, 'itineraries');
   const q = query(
     itinerariesRef,
@@ -61,7 +59,6 @@ export async function getUserItineraries(userId: string): Promise<SavedItinerary
       } as SavedItinerary;
     });
 
-    console.log('Fetched itineraries:', itineraries);
     return itineraries;
   } catch (error) {
     console.error('Error fetching user itineraries:', error);
@@ -116,7 +113,7 @@ export async function saveNewItinerary(
     normalizedDate,
     duration,
     days,
-    originalDays: [...days],
+    originalDays: JSON.parse(JSON.stringify(days)), // Deep copy
     createdAt: now,
     updatedAt: now,
     metadata
@@ -128,15 +125,24 @@ export async function saveNewItinerary(
 
 export async function updateItinerary(
   id: string,
-  updates: Partial<SavedItinerary>
+  updates: Partial<Omit<SavedItinerary, 'id' | 'userId'>>
 ): Promise<void> {
   if (!db) throw new Error('Firestore not initialized');
   
   const docRef = doc(db, 'itineraries', id);
-  await updateDoc(docRef, {
+  const docSnap = await getDoc(docRef);
+  
+  if (!docSnap.exists()) {
+    throw new Error('Itinerary not found');
+  }
+
+  // Sanitize the updates to ensure they're Firestore-compatible
+  const sanitizedUpdates = JSON.parse(JSON.stringify({
     ...updates,
     updatedAt: Date.now()
-  });
+  }));
+
+  await updateDoc(docRef, sanitizedUpdates);
 }
 
 export async function deleteItinerary(id: string, userId: string): Promise<void> {

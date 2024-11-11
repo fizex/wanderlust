@@ -51,11 +51,11 @@ export default function ItineraryPage() {
 
   // Debounced save function
   const debouncedSave = useCallback(
-    debounce(async (itineraryId: string, updatedItinerary: SavedItinerary) => {
+    debounce(async (itineraryId: string, days: SavedItinerary['days']) => {
       try {
         setSaving(true);
         await updateItinerary(itineraryId, {
-          days: updatedItinerary.days,
+          days,
           updatedAt: Date.now()
         });
         toast.success('Changes saved', { id: 'save-changes' });
@@ -73,11 +73,10 @@ export default function ItineraryPage() {
     if (!itinerary || !id) return;
 
     // Update local state immediately
-    const updatedItinerary = { ...itinerary, days };
-    setItinerary(updatedItinerary);
+    setItinerary(prev => prev ? { ...prev, days } : null);
 
     // Save to database with debounce
-    debouncedSave(id, updatedItinerary);
+    debouncedSave(id, days);
   };
 
   if (loading) {

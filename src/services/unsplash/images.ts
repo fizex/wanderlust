@@ -1,82 +1,94 @@
 import { UnsplashClient } from './client';
-import { REGIONS, COUNTRY_TO_REGION, COUNTRY_ALIASES } from './regions';
+import { REGIONS, COUNTRY_TO_REGION } from './regions';
 import { UnsplashError } from './errors';
 
-let unsplashClient: UnsplashClient | null = null;
+// Default images by country
+const COUNTRY_IMAGES = {
+  'usa': [
+    'photo-1501466044931-62695578d499', // Washington Monument
+    'photo-1501466044931-62695578d499', // Statue of Liberty
+    'photo-1496588152823-86ff7695e68f'  // Golden Gate Bridge
+  ],
+  'france': [
+    'photo-1499856871958-5b9627545d1a', // Eiffel Tower
+    'photo-1502602898657-3e91760cbb34', // Paris Street
+    'photo-1520939817895-060bdaf4fe90'  // Loire Valley
+  ],
+  'italy': [
+    'photo-1498307833015-e7b400441eb8', // Colosseum
+    'photo-1534445867742-43195f401b6c', // Venice
+    'photo-1516483638261-f4dbaf036963'  // Tuscany
+  ],
+  'default': [
+    'photo-1476514525535-07fb3b4ae5f1', // Generic Travel 1
+    'photo-1469854523086-cc02fe5d8800', // Generic Travel 2
+    'photo-1508672019048-805c876b67e2'  // Generic Travel 3
+  ]
+};
 
-export function initUnsplash(accessKey: string) {
-  unsplashClient = new UnsplashClient(accessKey);
-}
+// Common country name variations
+const COUNTRY_ALIASES = {
+  'united states': 'usa',
+  'united states of america': 'usa',
+  'u.s.a.': 'usa',
+  'u.s.': 'usa',
+  'united kingdom': 'uk',
+  'great britain': 'uk',
+};
 
-export async function getCountryImage(country: string): Promise<string> {
-  if (!unsplashClient) {
-    throw new UnsplashError('Unsplash client not initialized');
-  }
-
-  if (!country?.trim()) {
-    return getDefaultImage();
-  }
-
-  try {
-    // Normalize country name
-    const normalizedCountry = country.toLowerCase().trim();
-    const resolvedCountry = COUNTRY_ALIASES[normalizedCountry] || normalizedCountry;
-
-    // Try country-specific search with explicit location
-    try {
-      const photos = await unsplashClient.searchPhotos(
-        `${resolvedCountry} landmarks travel destination location:${resolvedCountry}`, 
-        5
-      );
-      return photos[Math.floor(Math.random() * photos.length)];
-    } catch (error) {
-      // If specific search fails, try broader regional images
-      const region = COUNTRY_TO_REGION[resolvedCountry];
-      if (region) {
-        const photos = await unsplashClient.searchPhotos(
-          REGIONS[region].searchTerm,
-          5
-        );
-        return photos[Math.floor(Math.random() * photos.length)];
-      }
-      throw error;
-    }
-  } catch (error) {
-    console.warn('Failed to fetch country images:', error);
-    return getDefaultImage();
-  }
-}
-
-export async function getCityImage(city: string): Promise<string> {
-  if (!unsplashClient) {
-    throw new UnsplashError('Unsplash client not initialized');
-  }
-
-  if (!city?.trim()) {
-    return getDefaultImage();
-  }
+async function getRandomImage(query: string, retries = 2): Promise<string | null> {
+  if (!unsplashClient) return null;
 
   try {
-    // Extract city name without country/state
-    const cityName = city.split(',')[0].trim();
-    
-    // Try city-specific search with explicit location
     const photos = await unsplashClient.searchPhotos(
-      `${cityName} city landmarks architecture location:${cityName}`,
+      `${query} landmark travel destination`,
       5
     );
     return photos[Math.floor(Math.random() * photos.length)];
   } catch (error) {
-    console.warn('Failed to fetch city images:', error);
-    return getDefaultImage();
+    if (retries > 0) {
+      return getRandomImage(query, retries - 1);
+    }
+    return null;
   }
 }
 
-function getDefaultImage(): string {
-  const defaultImages = [
-    'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1',
-    'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800',
-    'https://images.unsplash.com/photo-1508672019048-805c876b67e2'
-  ];
-  return defaultImages[Math.floor(Math.random() * defaultImages.length)];
+function getCountryFallbackImage(country: string): string {
+  const normalizedCountry = country.toLowerCase();
+  const countryKey = COUNTRY_ALIASES[normalizedCountry] || normalizedCountry;
+  const images = COUNTRY_IMAGES[countryKey] || COUNTRY_IMAGES.default;
+  return `https://images.unsplash.com/${images[Math.floor(Math.random() * images.length)]}?auto=format&fit=crop&q=80`;
+}
+
+let unsplashClient: UnsplashClient | null = null;
+
+export function initUnsplash(accessKey: string) {
+  if (!accessKey) {
+    console.warn('Unsplash access key not provided');
+    return;
+  }
+  unsplashClient = new UnsplashClient(accessKey);
+}
+
+export async function getCityImage(location: string, country: string = 'usa'): Promise<string> {
+  // Clean up the location string
+  const [specificLocation, cityName] = location.split(',').map(s => s.trim());
+  
+  try {
+    // Try specific location first
+    const specificImage = await getRandomImage(specificLocation);
+    if (specificImage) return specificImage;
+
+    // Try city name if available
+    if (cityName) {
+      const cityImage = await getRandomImage(cityName);
+      if (cityImage) return cityImage;
+    }
+
+    // Fallback to country-specific image
+    return getCountryFallbackImage(country);
+  } catch (error) {
+    console.warn('Failed to fetch location image:', error);
+    return getCountryFallbackImage(country);
+  }
 }

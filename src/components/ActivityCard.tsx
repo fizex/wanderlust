@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Star, Clock, MapPin, Globe, Tag, Trash2, GripVertical } from 'lucide-react';
 import { Activity } from '../types/itinerary';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import TextareaAutosize from 'react-textarea-autosize';
 
 interface ActivityCardProps {
   activity: Activity;
@@ -11,6 +12,10 @@ interface ActivityCardProps {
 }
 
 export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCardProps) {
+  const [isEditing, setIsEditing] = useState(activity.type === 'custom' && !activity.description);
+  const [text, setText] = useState(activity.description);
+  const [websiteUrl, setWebsiteUrl] = useState(activity.details?.website || '');
+
   const {
     attributes,
     listeners,
@@ -24,6 +29,35 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+
+  const handleSave = () => {
+    if (!text.trim() && !websiteUrl) return;
+
+    let finalWebsiteUrl = websiteUrl.trim();
+    if (finalWebsiteUrl && !finalWebsiteUrl.startsWith('http')) {
+      finalWebsiteUrl = `https://${finalWebsiteUrl}`;
+    }
+
+    const updatedActivity = {
+      ...activity,
+      description: text.trim(),
+      details: {
+        ...activity.details,
+        website: finalWebsiteUrl || undefined,
+      },
+    };
+
+    onEdit(updatedActivity);
+    setIsEditing(false);
+  };
+
+  const handleStartEditing = (e: React.MouseEvent) => {
+    // Prevent editing when clicking links
+    if ((e.target as HTMLElement).tagName === 'A') {
+      return;
+    }
+    setIsEditing(true);
   };
 
   const renderRating = (rating: number | string | undefined) => {
@@ -68,54 +102,113 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
       </div>
 
       <div className="p-4 pl-12">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">{activity.title}</h3>
-            {activity.details?.location && (
-              <div className="flex items-center text-gray-600 mt-1">
-                <MapPin className="w-4 h-4 mr-1" />
-                <span className="text-sm">{activity.details.location}</span>
-              </div>
+        {isEditing ? (
+          <div className="space-y-4">
+            <TextareaAutosize
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              minRows={2}
+              placeholder="Enter description..."
+              autoFocus
+            />
+
+            {activity.type === 'custom' && (
+              <input
+                type="text"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                placeholder="Add a website URL (optional)"
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
             )}
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                className="px-3 py-1 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              >
+                Save
+              </button>
+            </div>
           </div>
-          <button
-            onClick={onDelete}
-            className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+        ) : (
+          <div 
+            onClick={handleStartEditing}
+            className="space-y-4 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
           >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-
-        <p className="mt-2 text-gray-600">{activity.description}</p>
-
-        {activity.details && (
-          <div className="mt-4 space-y-2">
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-              {activity.details.rating !== undefined && renderRating(activity.details.rating)}
-              {activity.details.duration && (
-                <div className="flex items-center">
-                  <Clock className="w-4 h-4 mr-1" />
-                  <span>{activity.details.duration}</span>
-                </div>
-              )}
-              {activity.details.price && (
-                <div className="font-medium text-gray-900">{activity.details.price}</div>
-              )}
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">{activity.title}</h3>
+                {activity.details?.location && (
+                  <div className="flex items-center text-gray-600 mt-1">
+                    <MapPin className="w-4 h-4 mr-1" />
+                    <span className="text-sm">{activity.details.location}</span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
 
-            {activity.details.website && (
-              <a
-                href={activity.details.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700"
-              >
-                <Globe className="w-4 h-4 mr-1" />
-                <span>Visit website</span>
-              </a>
+            {text && (
+              <div className="prose prose-sm max-w-none">
+                {text}
+              </div>
             )}
 
-            {activity.details.tags && renderTags(activity.details.tags)}
+            {activity.details && (
+              <div className="mt-4 space-y-2">
+                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                  {activity.details.rating !== undefined && renderRating(activity.details.rating)}
+                  {activity.details.duration && (
+                    <div className="flex items-center">
+                      <Clock className="w-4 h-4 mr-1" />
+                      <span>{activity.details.duration}</span>
+                    </div>
+                  )}
+                  {activity.details.price && (
+                    <div className="font-medium text-gray-900">{activity.details.price}</div>
+                  )}
+                </div>
+
+                {(activity.details.website || websiteUrl) && (
+                  <a
+                    href={activity.details.website || websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Globe className="w-4 h-4 mr-1" />
+                    <span>Visit website</span>
+                  </a>
+                )}
+
+                {activity.details.tags && renderTags(activity.details.tags)}
+              </div>
+            )}
+
+            {!text && !activity.details?.website && (
+              <div className="text-gray-400 italic">
+                Click to add content...
+              </div>
+            )}
           </div>
         )}
       </div>

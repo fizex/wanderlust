@@ -1,6 +1,7 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,26 +14,34 @@ const firebaseConfig = {
 
 // Initialize Firebase only if config is valid
 function initializeFirebase() {
-  if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
-    console.error('Firebase configuration is incomplete');
-    return null;
-  }
-
   try {
-    return initializeApp(firebaseConfig);
+    // Validate required config
+    if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+      throw new Error('Missing required Firebase configuration');
+    }
+
+    // Initialize Firebase app
+    const app = initializeApp(firebaseConfig);
+
+    // Initialize services
+    const auth = getAuth(app);
+    auth.useDeviceLanguage();
+
+    const db = getFirestore(app);
+    
+    let storage = null;
+    if (firebaseConfig.storageBucket) {
+      storage = getStorage(app);
+    }
+
+    return { app, auth, db, storage };
   } catch (error) {
     console.error('Error initializing Firebase:', error);
-    return null;
+    return { app: null, auth: null, db: null, storage: null };
   }
 }
 
-const app = initializeFirebase();
+// Initialize all Firebase services
+const { app, auth, db, storage } = initializeFirebase();
 
-// Get Auth instance
-const auth = app ? getAuth(app) : null;
-if (auth) auth.useDeviceLanguage();
-
-// Get Firestore instance
-const db = app ? getFirestore(app) : null;
-
-export { auth, db };
+export { app, auth, db, storage };
