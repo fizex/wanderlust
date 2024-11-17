@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Star, Clock, MapPin, Globe, Tag, Trash2, GripVertical } from 'lucide-react';
 import { Activity } from '../types/itinerary';
 import { useSortable } from '@dnd-kit/sortable';
@@ -13,8 +13,10 @@ interface ActivityCardProps {
 
 export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCardProps) {
   const [isEditing, setIsEditing] = useState(activity.type === 'custom' && !activity.description);
+  const [title, setTitle] = useState(activity.title);
   const [text, setText] = useState(activity.description);
   const [websiteUrl, setWebsiteUrl] = useState(activity.details?.website || '');
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const {
     attributes,
@@ -31,8 +33,24 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
     opacity: isDragging ? 0.5 : 1,
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cardRef.current && !cardRef.current.contains(event.target as Node)) {
+        handleSave();
+      }
+    };
+
+    if (isEditing) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isEditing, title, text, websiteUrl]);
+
   const handleSave = () => {
-    if (!text.trim() && !websiteUrl) return;
+    if (!text.trim() && !websiteUrl && !title.trim()) return;
 
     let finalWebsiteUrl = websiteUrl.trim();
     if (finalWebsiteUrl && !finalWebsiteUrl.startsWith('http')) {
@@ -41,6 +59,7 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
 
     const updatedActivity = {
       ...activity,
+      title: title.trim() || 'Untitled Activity',
       description: text.trim(),
       details: {
         ...activity.details,
@@ -93,7 +112,10 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        if (cardRef) cardRef.current = node;
+      }}
       style={style}
       className="group relative bg-white rounded-xl shadow-sm overflow-hidden transition-all hover:shadow-md border border-gray-100"
     >
@@ -104,13 +126,21 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
       <div className="p-4 pl-12">
         {isEditing ? (
           <div className="space-y-4">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full p-2 text-lg font-semibold border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder="Activity title..."
+              autoFocus
+            />
+            
             <TextareaAutosize
               value={text}
               onChange={(e) => setText(e.target.value)}
               className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               minRows={2}
               placeholder="Enter description..."
-              autoFocus
             />
 
             {activity.type === 'custom' && (
@@ -122,23 +152,6 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             )}
-
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                className="px-3 py-1 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-              >
-                Save
-              </button>
-            </div>
           </div>
         ) : (
           <div 
@@ -147,7 +160,7 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
           >
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">{activity.title}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
                 {activity.details?.location && (
                   <div className="flex items-center text-gray-600 mt-1">
                     <MapPin className="w-4 h-4 mr-1" />
