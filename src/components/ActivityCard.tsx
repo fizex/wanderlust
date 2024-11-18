@@ -16,6 +16,7 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
   const [title, setTitle] = useState(activity.title);
   const [text, setText] = useState(activity.description);
   const [websiteUrl, setWebsiteUrl] = useState(activity.details?.website || '');
+  const [showUrlField, setShowUrlField] = useState(!!activity.details?.website);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -31,6 +32,7 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    minHeight: isDragging ? '200px' : 'auto', // Add minimum height during drag
   };
 
   useEffect(() => {
@@ -72,7 +74,6 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
   };
 
   const handleStartEditing = (e: React.MouseEvent) => {
-    // Prevent editing when clicking links
     if ((e.target as HTMLElement).tagName === 'A') {
       return;
     }
@@ -117,7 +118,7 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
         if (cardRef) cardRef.current = node;
       }}
       style={style}
-      className="group relative bg-white rounded-xl shadow-sm overflow-hidden transition-all hover:shadow-md border border-gray-100"
+      className={`group relative bg-white rounded-xl shadow-sm overflow-hidden transition-all hover:shadow-md border border-gray-100`}
     >
       <div className="absolute top-0 left-0 p-3 cursor-grab touch-none z-10" {...attributes} {...listeners}>
         <GripVertical className="w-4 h-4 text-gray-400" />
@@ -142,16 +143,6 @@ export default function ActivityCard({ activity, onDelete, onEdit }: ActivityCar
               minRows={2}
               placeholder="Enter description..."
             />
-
-            {activity.type === 'custom' && (
-              <input
-                type="text"
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                placeholder="Add a website URL (optional)"
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            )}
           </div>
         ) : (
           <div 

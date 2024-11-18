@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Calendar, Plus, Loader2 } from 'lucide-react';
 import { ItineraryDay, Activity } from '../types/itinerary';
 import ActivityCard from './ActivityCard';
+import KiwiAdPanel from './ads/KiwiAdPanel';
 import {
   DndContext,
   DragEndEvent,
@@ -11,6 +12,7 @@ import {
   DragStartEvent,
   DragOverEvent,
   UniqueIdentifier,
+  DragOverlay,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -44,6 +46,7 @@ export default function ItineraryEditor({
 }: ItineraryEditorProps) {
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+  const [activeActivity, setActiveActivity] = useState<Activity | null>(null);
 
   React.useEffect(() => {
     if (loading) {
@@ -88,7 +91,14 @@ export default function ItineraryEditor({
   }, [normalizedItinerary]);
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id);
+    const { active } = event;
+    setActiveId(active.id);
+    document.body.classList.add('dragging');
+
+    const activeData = findDayAndActivity(String(active.id));
+    if (activeData) {
+      setActiveActivity(activeData.activity);
+    }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -129,6 +139,8 @@ export default function ItineraryEditor({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+    setActiveActivity(null);
+    document.body.classList.remove('dragging');
 
     if (!over || active.id === over.id) return;
 
@@ -204,62 +216,83 @@ export default function ItineraryEditor({
         onDragEnd={handleDragEnd}
       >
         <div className="space-y-12">
-          {normalizedItinerary.map((day) => {
+          {normalizedItinerary.map((day, index) => {
             const dayActivities = day.activities.map(activity => activity.id);
             
             return (
-              <div key={day.id} className="relative">
-                <div className="flex items-center space-x-2 mb-6">
-                  <Calendar className="w-5 h-5 text-indigo-600" />
-                  <h3 className="text-lg font-medium">Day {day.day}</h3>
-                  {day.location && (
-                    <span className="text-gray-500">- {day.location}</span>
-                  )}
+              <React.Fragment key={day.id}>
+                <div className="relative">
+                  <div className="flex items-center space-x-2 mb-6">
+                    <Calendar className="w-5 h-5 text-indigo-600" />
+                    <h3 className="text-lg font-medium">Day {day.day}</h3>
+                    {day.location && (
+                      <span className="text-gray-500">- {day.location}</span>
+                    )}
+                  </div>
+
+                  <SortableContext items={dayActivities} strategy={verticalListSortingStrategy}>
+                    <div className="grid grid-cols-1 gap-6">
+                      {day.activities.map((activity) => (
+                        <ActivityCard
+                          key={activity.id}
+                          activity={activity}
+                          onDelete={() => {
+                            const newItinerary = normalizedItinerary.map(d =>
+                              d.id === day.id
+                                ? { ...d, activities: d.activities.filter(a => a.id !== activity.id) }
+                                : d
+                            );
+                            setItinerary(newItinerary);
+                          }}
+                          onEdit={(updatedActivity) => {
+                            const newItinerary = normalizedItinerary.map(d =>
+                              d.id === day.id
+                                ? {
+                                    ...d,
+                                    activities: d.activities.map(a =>
+                                      a.id === activity.id ? updatedActivity : a
+                                    ),
+                                  }
+                                : d
+                            );
+                            setItinerary(newItinerary);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+
+                  <button
+                    onClick={() => handleAddActivity(day.id)}
+                    className="mt-6 text-indigo-600 hover:text-indigo-700 flex items-center space-x-1"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Activity</span>
+                  </button>
                 </div>
 
-                <SortableContext items={dayActivities} strategy={verticalListSortingStrategy}>
-                  <div className="grid grid-cols-1 gap-6">
-                    {day.activities.map((activity) => (
-                      <ActivityCard
-                        key={activity.id}
-                        activity={activity}
-                        onDelete={() => {
-                          const newItinerary = normalizedItinerary.map(d =>
-                            d.id === day.id
-                              ? { ...d, activities: d.activities.filter(a => a.id !== activity.id) }
-                              : d
-                          );
-                          setItinerary(newItinerary);
-                        }}
-                        onEdit={(updatedActivity) => {
-                          const newItinerary = normalizedItinerary.map(d =>
-                            d.id === day.id
-                              ? {
-                                  ...d,
-                                  activities: d.activities.map(a =>
-                                    a.id === activity.id ? updatedActivity : a
-                                  ),
-                                }
-                              : d
-                          );
-                          setItinerary(newItinerary);
-                        }}
-                      />
-                    ))}
+                {/* Show Kiwi.com ad after every 3rd day */}
+                {(index + 1) % 3 === 0 && index !== normalizedItinerary.length - 1 && (
+                  <div className="relative my-12 pointer-events-none">
+                    <KiwiAdPanel />
                   </div>
-                </SortableContext>
-
-                <button
-                  onClick={() => handleAddActivity(day.id)}
-                  className="mt-6 text-indigo-600 hover:text-indigo-700 flex items-center space-x-1"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Activity</span>
-                </button>
-              </div>
+                )}
+              </React.Fragment>
             );
           })}
         </div>
+
+        <DragOverlay>
+          {activeActivity ? (
+            <div className="opacity-80">
+              <ActivityCard
+                activity={activeActivity}
+                onDelete={() => {}}
+                onEdit={() => {}}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );

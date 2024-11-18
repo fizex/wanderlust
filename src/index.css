@@ -6,6 +6,16 @@
   body {
     @apply antialiased text-gray-800;
   }
+
+  /* Prevent scrolling while dragging */
+  body.dragging {
+    @apply overflow-hidden;
+    cursor: grabbing !important;
+  }
+
+  body.dragging * {
+    cursor: grabbing !important;
+  }
 }
 
 @layer components {
