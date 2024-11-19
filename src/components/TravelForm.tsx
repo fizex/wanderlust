@@ -68,35 +68,37 @@ export default function TravelForm({ onSubmit, loading, error }: TravelFormProps
           </div>
         </div>
 
-        <div>
-          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-            <Calendar className="w-4 h-4 mr-2" />
-            Travel Dates
-          </label>
-          <input
-            type="text"
-            value={formData.dates}
-            onChange={(e) => setFormData(prev => ({ ...prev, dates: e.target.value }))}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="Month, season, or specific dates"
-          />
-        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <Calendar className="w-4 h-4 mr-2" />
+              Travel Dates
+            </label>
+            <input
+              type="text"
+              value={formData.dates}
+              onChange={(e) => setFormData(prev => ({ ...prev, dates: e.target.value }))}
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder="Month, season, or specific dates"
+            />
+          </div>
 
-        <div>
-          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-            <Clock className="w-4 h-4 mr-2" />
-            Duration (days)
-          </label>
-          <input
-            type="number"
-            min="1"
-            max="30"
-            value={formData.duration}
-            onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="How many days?"
-            required
-          />
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <Clock className="w-4 h-4 mr-2" />
+              Duration (days)
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="30"
+              value={formData.duration}
+              onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder="How many days?"
+              required
+            />
+          </div>
         </div>
 
         <div>

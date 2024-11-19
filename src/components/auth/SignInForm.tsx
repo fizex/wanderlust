@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { signIn } from '../../services/firebase/auth';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Loader2 } from 'lucide-react';
+import { Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AuthLayout from './AuthLayout';
 
@@ -12,6 +12,28 @@ export default function SignInForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const getErrorMessage = (error: any): string => {
+    if (typeof error === 'string') return error;
+    
+    const errorCode = error?.code || '';
+    switch (errorCode) {
+      case 'auth/invalid-email':
+        return 'Please enter a valid email address';
+      case 'auth/user-disabled':
+        return 'This account has been disabled. Please contact support';
+      case 'auth/user-not-found':
+        return 'No account found with this email. Please check your email or sign up';
+      case 'auth/wrong-password':
+        return 'Incorrect password. Please try again or reset your password';
+      case 'auth/too-many-requests':
+        return 'Too many failed attempts. Please try again later or reset your password';
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your internet connection';
+      default:
+        return 'Unable to sign in. Please try again';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +45,7 @@ export default function SignInForm() {
       navigate('/');
       toast.success('Welcome back!');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to sign in';
+      const message = getErrorMessage(error);
       setError(message);
       toast.error(message);
     } finally {
@@ -46,8 +68,9 @@ export default function SignInForm() {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
-            {error}
+          <div className="p-4 bg-red-50 border border-red-100 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
         
