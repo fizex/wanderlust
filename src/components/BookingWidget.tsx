@@ -1,11 +1,15 @@
 import React from 'react';
 import { Plane, Hotel, Car } from 'lucide-react';
 
-const AFFILIATE_URL = 'https://trip.tp.st/pdPWivxY';
+const AFFILIATE_LINKS = {
+  flights: 'https://trip.tp.st/OJpuGKoz',
+  hotels: 'https://trip.tp.st/eYLjLgKb',
+  cars: 'https://trip.tp.st/MpESxdb7'
+};
 
 export default function BookingWidget() {
-  const handleClick = (service: string) => {
-    window.open(`${AFFILIATE_URL}?service=${service}`, '_blank');
+  const handleClick = (service: keyof typeof AFFILIATE_LINKS) => {
+    window.open(AFFILIATE_LINKS[service], '_blank');
   };
 
   return (
