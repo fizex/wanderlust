@@ -3,15 +3,17 @@ import { UnsplashAPIError, UnsplashConfigError } from './errors';
 
 let unsplashApi: ReturnType<typeof createApi> | null = null;
 
-// Simple cache for storing fetched images
+// Cache with shorter duration
 const imageCache = new Map<string, {
   url: string;
   timestamp: number;
 }>();
 
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const REQUEST_DELAY = 100; // ms between requests
 let lastRequestTime = 0;
+
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828';
 
 async function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -35,16 +37,26 @@ export function initUnsplash(accessKey: string) {
 }
 
 export async function getCountryImage(country: string): Promise<string> {
-  if (!country?.trim() || !unsplashApi) {
-    throw new UnsplashConfigError('Invalid country input or Unsplash not initialized');
+  if (!country?.trim()) {
+    console.warn('Invalid country name provided');
+    return DEFAULT_IMAGE;
   }
 
-  const cacheKey = `country-${country.toLowerCase()}`;
+  // Clean up country name
+  const cleanCountry = country.trim().toLowerCase();
+  console.log('Getting image for country:', cleanCountry);
+
+  if (!unsplashApi) {
+    console.error('Unsplash API not initialized');
+    return DEFAULT_IMAGE;
+  }
+
+  const cacheKey = `country-${cleanCountry}`;
 
   // Check cache
   const cached = imageCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log('Using cached image for:', country);
+    console.log('Using cached image for:', cleanCountry);
     return cached.url;
   }
 
@@ -56,10 +68,12 @@ export async function getCountryImage(country: string): Promise<string> {
     }
     lastRequestTime = now;
 
-    console.log('Fetching image for country:', country);
-    
+    // Build search query
+    const searchQuery = `${cleanCountry} landmarks travel`;
+    console.log('Unsplash search query:', searchQuery);
+
     const result = await unsplashApi.search.getPhotos({
-      query: `${country} landmarks travel`,
+      query: searchQuery,
       orientation: 'landscape',
       perPage: 1,
       contentFilter: 'high',
@@ -67,15 +81,21 @@ export async function getCountryImage(country: string): Promise<string> {
     });
 
     if (result.type === 'error') {
-      throw new UnsplashAPIError(result.errors?.[0] || 'Failed to fetch image');
+      throw new UnsplashAPIError(
+        result.errors?.[0] || 'Failed to fetch image',
+        result.status
+      );
     }
 
     if (!result.response?.results?.length) {
-      throw new UnsplashAPIError('No images found');
+      console.warn('No images found for country:', cleanCountry);
+      return DEFAULT_IMAGE;
     }
 
-    const imageUrl = result.response.results[0].urls.regular;
-    console.log('Received image URL:', imageUrl);
+    const photo = result.response.results[0];
+    const imageUrl = photo.urls.regular;
+
+    console.log('Found image for', cleanCountry, ':', imageUrl);
 
     // Cache the result
     imageCache.set(cacheKey, {
@@ -86,6 +106,10 @@ export async function getCountryImage(country: string): Promise<string> {
     return imageUrl;
   } catch (error) {
     console.error('Error fetching country image:', error);
-    throw error;
+    
+    // Clear cache in case it's corrupted
+    imageCache.delete(cacheKey);
+    
+    return DEFAULT_IMAGE;
   }
 }

@@ -13,7 +13,7 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase only if config is valid
-async function initializeFirebase() {
+function initializeFirebase() {
   try {
     // Validate required config
     if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
@@ -29,21 +29,19 @@ async function initializeFirebase() {
 
     const db = getFirestore(app);
     
-    // Enable persistence before any other Firestore operations
-    try {
-      await enableIndexedDbPersistence(db);
-    } catch (err: any) {
+    let storage = null;
+    if (firebaseConfig.storageBucket) {
+      storage = getStorage(app);
+    }
+
+    // Enable persistence after initialization
+    enableIndexedDbPersistence(db).catch((err) => {
       if (err.code === 'failed-precondition') {
         console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
       } else if (err.code === 'unimplemented') {
         console.warn('The current browser does not support offline persistence.');
       }
-    }
-    
-    let storage = null;
-    if (firebaseConfig.storageBucket) {
-      storage = getStorage(app);
-    }
+    });
 
     return { app, auth, db, storage };
   } catch (error) {
@@ -53,6 +51,6 @@ async function initializeFirebase() {
 }
 
 // Initialize all Firebase services
-const firebaseInstance = await initializeFirebase();
+const { app, auth, db, storage } = initializeFirebase();
 
-export const { app, auth, db, storage } = firebaseInstance;
+export { app, auth, db, storage };

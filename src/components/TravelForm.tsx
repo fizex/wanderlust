@@ -8,6 +8,8 @@ interface TravelFormProps {
   error: string | null;
 }
 
+const MAX_DAYS = 30;
+
 export default function TravelForm({ onSubmit, loading, error }: TravelFormProps) {
   const [formData, setFormData] = useState<FormData>({
     destination: '',
@@ -17,10 +19,38 @@ export default function TravelForm({ onSubmit, loading, error }: TravelFormProps
   });
 
   const [surpriseMe, setSurpriseMe] = useState(false);
+  const [durationError, setDurationError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const days = parseInt(formData.duration);
+    if (isNaN(days) || days < 1) {
+      setDurationError('Duration must be at least 1 day');
+      return;
+    }
+    if (days > MAX_DAYS) {
+      setDurationError(`Duration cannot exceed ${MAX_DAYS} days`);
+      return;
+    }
+
+    setDurationError(null);
     onSubmit(formData);
+  };
+
+  const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const days = parseInt(value);
+    
+    if (value && (isNaN(days) || days < 1)) {
+      setDurationError('Duration must be at least 1 day');
+    } else if (days > MAX_DAYS) {
+      setDurationError(`Duration cannot exceed ${MAX_DAYS} days`);
+    } else {
+      setDurationError(null);
+    }
+
+    setFormData(prev => ({ ...prev, duration: value }));
   };
 
   const handleSurpriseMe = () => {
@@ -90,13 +120,18 @@ export default function TravelForm({ onSubmit, loading, error }: TravelFormProps
             <input
               type="number"
               min="1"
-              max="30"
+              max={MAX_DAYS}
               value={formData.duration}
-              onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              placeholder="How many days?"
+              onChange={handleDurationChange}
+              className={`w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                durationError ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder={`1-${MAX_DAYS} days`}
               required
             />
+            {durationError && (
+              <p className="mt-1 text-sm text-red-600">{durationError}</p>
+            )}
           </div>
         </div>
 
@@ -116,7 +151,7 @@ export default function TravelForm({ onSubmit, loading, error }: TravelFormProps
 
         <button
           type="submit"
-          disabled={loading || !formData.destination || !formData.duration}
+          disabled={loading || !formData.destination || !formData.duration || !!durationError}
           className="w-full bg-gradient-to-r from-indigo-600 to-blue-500 text-white py-2 px-4 rounded-lg hover:from-indigo-700 hover:to-blue-600 transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {loading ? (
