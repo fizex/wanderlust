@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, CalendarClock, Sparkles, Info, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, CalendarClock, Sparkles, Info, AlertCircle, Loader2 } from 'lucide-react';
 import { ItineraryDay } from '../types/itinerary';
 import { formatDistanceToNow } from 'date-fns';
 import { getCountryImage } from '../services/unsplash';
@@ -33,14 +33,41 @@ export default function ItineraryHero({
   createdAt,
   corrections = [],
 }: ItineraryHeroProps) {
-  const [imageUrl, setImageUrl] = React.useState<string>('');
+  const [imageUrl, setImageUrl] = React.useState<string | null>(null);
+  const [imageError, setImageError] = React.useState<boolean>(false);
+  const [isLoading, setIsLoading] = React.useState<boolean>(true);
   
   React.useEffect(() => {
+    let isMounted = true;
+
     async function loadImage() {
-      const url = await getCountryImage(country);
-      setImageUrl(url);
+      try {
+        setIsLoading(true);
+        setImageError(false);
+        console.log('Fetching image for country:', country);
+        const url = await getCountryImage(country);
+        console.log('Received image URL:', url);
+        
+        if (isMounted) {
+          setImageUrl(url);
+        }
+      } catch (error) {
+        console.error('Error loading country image:', error);
+        if (isMounted) {
+          setImageError(true);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     }
+
     loadImage();
+
+    return () => {
+      isMounted = false;
+    };
   }, [country]);
 
   const totalDays = days?.length || 0;
@@ -58,25 +85,25 @@ export default function ItineraryHero({
     }
   }, [createdAt]);
 
-  const localEvents = React.useMemo(() => {
-    if (!days?.[0]?.localEvents || !Array.isArray(days[0].localEvents)) {
-      return [];
-    }
-
-    return days[0].localEvents
-      .filter((event): event is { event_name: string; event_description?: string } => {
-        return typeof event === 'object' && event !== null && 'event_name' in event;
-      });
-  }, [days]);
-
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       <div className="relative h-64 md:h-80">
-        <img
-          src={imageUrl}
-          alt={`${country} - ${destination}`}
-          className="w-full h-full object-cover"
-        />
+        {isLoading ? (
+          <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center">
+            <Loader2 className="w-12 h-12 text-white animate-spin" />
+          </div>
+        ) : imageUrl && !imageError ? (
+          <img
+            src={imageUrl}
+            alt={`${country} - ${destination}`}
+            className="w-full h-full object-cover"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center">
+            <MapPin className="w-16 h-16 text-white/50" />
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
           <h1 className="text-3xl font-bold">{name}</h1>
@@ -136,27 +163,6 @@ export default function ItineraryHero({
                       <span className="font-medium text-gray-900">{correction.corrected}</span>
                     </div>
                     <p className="text-sm text-gray-600 mt-1">{correction.reason}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
-
-        {localEvents.length > 0 && (
-          <div className="border-t pt-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <Info className="w-6 h-6 text-indigo-600" />
-              <h3 className="text-lg font-semibold">Local Events During Your Stay</h3>
-            </div>
-            <div className="bg-indigo-50 rounded-lg p-4">
-              <ul className="space-y-4">
-                {localEvents.map((event, index) => (
-                  <li key={index} className="border-l-2 border-indigo-300 pl-4">
-                    <span className="font-medium text-gray-900">{event.event_name}</span>
-                    {event.event_description && (
-                      <p className="text-sm text-gray-600 mt-1">{event.event_description}</p>
-                    )}
                   </li>
                 ))}
               </ul>

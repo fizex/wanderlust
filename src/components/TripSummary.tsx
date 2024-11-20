@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapPin, Calendar } from 'lucide-react';
 import { ItineraryDay } from '../types/itinerary';
+import { getCountryImage } from '../services/unsplash';
 
 interface TripSummaryProps {
   destination: string;
@@ -8,17 +9,42 @@ interface TripSummaryProps {
 }
 
 export default function TripSummary({ destination, itinerary }: TripSummaryProps) {
-  const imageUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(destination)},landmark`;
+  const [imageUrl, setImageUrl] = React.useState<string | null>(null);
   const totalDays = itinerary.length;
+
+  React.useEffect(() => {
+    let isMounted = true;
+
+    async function loadImage() {
+      try {
+        const url = await getCountryImage(destination);
+        if (isMounted) {
+          setImageUrl(url);
+        }
+      } catch (error) {
+        console.error('Failed to load destination image:', error);
+      }
+    }
+
+    loadImage();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [destination]);
 
   return (
     <div className="relative mb-8 rounded-xl overflow-hidden">
       <div className="h-48 relative">
-        <img
-          src={imageUrl}
-          alt={destination}
-          className="w-full h-full object-cover"
-        />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={destination}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-blue-600" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
       </div>
       

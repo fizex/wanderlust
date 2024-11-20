@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, MapPin, Clock, Heart, MessageSquare, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Clock, Heart, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { FormData } from '../types/form';
 
 interface TravelFormProps {
@@ -14,7 +14,6 @@ export default function TravelForm({ onSubmit, loading, error }: TravelFormProps
     dates: '',
     duration: '',
     interests: '',
-    additionalInfo: '',
   });
 
   const [surpriseMe, setSurpriseMe] = useState(false);
@@ -112,20 +111,6 @@ export default function TravelForm({ onSubmit, loading, error }: TravelFormProps
             className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             rows={3}
             placeholder="What do you love doing while traveling?"
-          />
-        </div>
-
-        <div>
-          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-            <MessageSquare className="w-4 h-4 mr-2" />
-            Additional Information
-          </label>
-          <textarea
-            value={formData.additionalInfo}
-            onChange={(e) => setFormData(prev => ({ ...prev, additionalInfo: e.target.value }))}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            rows={3}
-            placeholder="Any specific requirements or preferences?"
           />
         </div>
 

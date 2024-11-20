@@ -1,8 +1,6 @@
 import OpenAI from "openai";
 import { Activity, ItineraryDay } from "../../types/itinerary";
 import { FormData } from "../../types/form";
-import { getCityImage } from "../unsplash";
-import { OpenAIServiceError } from "./errors";
 
 const SYSTEM_PROMPT = `You are an expert travel planner. Create detailed itineraries that include:
 
@@ -78,7 +76,6 @@ export class OpenAIClient {
 
 Travel period: ${formData.dates || 'Flexible'}
 Interests: ${formData.interests || 'Various activities'}
-Additional requirements: ${formData.additionalInfo || 'None'}
 
 Consider:
 - Local weather and seasonal activities for the specified dates
@@ -87,7 +84,7 @@ Consider:
 - Opening hours and peak times
 - Travel time between locations
 
-IMPORTANT: For each activity, include the main landmark or attraction name in the location field to ensure relevant imagery.
+IMPORTANT: For each activity, include the main landmark or attraction name in the location field.
 
 Return a complete itinerary JSON matching the example structure provided.`;
 
@@ -108,31 +105,23 @@ Return a complete itinerary JSON matching the example structure provided.`;
       }
 
       const response = JSON.parse(content);
-      const country = response.metadata?.country || response.country || 'usa';
+      const country = response.metadata?.country || response.country || 'Unknown';
 
-      // Add images to activities and filter out any empty ones
-      const itinerary = await Promise.all(
-        response.days.map(async (day: ItineraryDay) => ({
-          ...day,
-          activities: await Promise.all(
-            (day.activities || [])
-              .filter((activity: Activity) => 
-                activity && 
-                activity.title && 
-                activity.description && 
-                activity.type
-              )
-              .map(async (activity: Activity) => ({
-                ...activity,
-                id: `activity-${day.day}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                imageUrl: await getCityImage(
-                  `${activity.details?.location || activity.title}, ${day.location}`,
-                  country
-                )
-              }))
+      // Create itinerary without images - they'll be handled by the UI components
+      const itinerary = response.days.map((day: any) => ({
+        ...day,
+        activities: day.activities
+          .filter((activity: Activity) => 
+            activity && 
+            activity.title && 
+            activity.description && 
+            activity.type
           )
-        }))
-      );
+          .map((activity: Activity) => ({
+            ...activity,
+            id: `activity-${day.day}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          }))
+      }));
 
       return {
         itinerary,
@@ -142,10 +131,7 @@ Return a complete itinerary JSON matching the example structure provided.`;
       };
     } catch (error) {
       console.error('OpenAI API Error:', error);
-      throw new OpenAIServiceError(
-        'Failed to generate itinerary. Please try again.',
-        error instanceof Error ? error : undefined
-      );
+      throw new Error('Failed to generate itinerary. Please try again.');
     }
   }
 }

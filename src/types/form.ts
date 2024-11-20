@@ -3,5 +3,4 @@ export interface FormData {
   dates: string;
   duration: string;
   interests: string;
-  additionalInfo: string;
 }
